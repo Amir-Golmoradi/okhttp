@@ -2,34 +2,16 @@ package okhttp3
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
-import assertk.assertions.isTrue
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import okio.Buffer
 import okio.BufferedSink
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.NullSource
 import org.junit.jupiter.params.provider.ValueSource
 
 open class ForwardingRequestBodyTest {
-  @Test
-  fun forwardsIsOneShot() {
-    val delegate =
-      object : RequestBody() {
-        override fun contentType(): MediaType? = null
-
-        override fun writeTo(sink: BufferedSink) {}
-
-        override fun isOneShot(): Boolean = true
-      }
-
-    val forwardingBody = ForwardingRequestBody(delegate)
-
-    assertThat(forwardingBody.isOneShot()).isTrue()
-  }
-
   /**
    * Verifies that overriding the content type preserves the delegate's content,
    * content length, and one-shot and duplex flags.

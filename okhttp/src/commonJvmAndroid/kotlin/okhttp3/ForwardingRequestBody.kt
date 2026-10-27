@@ -19,10 +19,8 @@ import java.io.IOException
 import okio.BufferedSink
 
 open class ForwardingRequestBody(
-  delegate: RequestBody?,
+  private val delegate: RequestBody,
 ) : RequestBody() {
-  private val delegate: RequestBody
-
   fun delegate(): RequestBody = delegate
 
   override fun contentType(): MediaType? = delegate.contentType()
@@ -35,15 +33,9 @@ open class ForwardingRequestBody(
     delegate.writeTo(sink)
   }
 
-  // Duplex allows the request body to be written while the response body is read.
   override fun isDuplex(): Boolean = delegate.isDuplex()
 
   override fun isOneShot(): Boolean = delegate.isOneShot()
 
   override fun toString(): String = javaClass.simpleName + "(" + delegate.toString() + ")"
-
-  init {
-    requireNotNull(delegate) { "delegate == null" }
-    this.delegate = delegate
-  }
 }
