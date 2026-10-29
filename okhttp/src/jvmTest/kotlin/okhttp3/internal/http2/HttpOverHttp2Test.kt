@@ -1079,12 +1079,19 @@ class HttpOverHttp2Test(
     val response = call.execute()
     assertThat(response.body.string()).isEqualTo("abc")
 
-    // New connection.
-    assertThat(server.takeRequest().exchangeIndex).isEqualTo(0)
-    // Reused connection.
-    assertThat(server.takeRequest().exchangeIndex).isEqualTo(1)
-    // New connection.
-    assertThat(server.takeRequest().exchangeIndex).isEqualTo(0)
+    val requests = List(3) { server.takeRequest() }
+
+    // Resets can trigger retries before earlier requests finish being recorded.
+    val exchangeIndicesByConnection =
+      requests
+        .groupBy { it.connectionIndex }
+        .values
+        .map { connectionRequests ->
+          connectionRequests.map { it.exchangeIndex }.sorted()
+        }
+
+    assertThat(exchangeIndicesByConnection)
+      .containsExactlyInAnyOrder(listOf(0, 1), listOf(0))
   }
 
   @Test
