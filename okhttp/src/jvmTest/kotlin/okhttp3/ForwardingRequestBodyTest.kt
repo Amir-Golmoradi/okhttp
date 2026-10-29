@@ -2,10 +2,12 @@ package okhttp3
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import java.lang.reflect.Modifier
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import okio.Buffer
 import okio.BufferedSink
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.NullSource
@@ -74,5 +76,24 @@ open class ForwardingRequestBodyTest {
     val forwardingBody = ForwardingRequestBody(delegate)
 
     assertThat(forwardingBody.contentType()).isEqualTo(mediaType)
+  }
+
+  @Test
+  fun overridesAllOverridableRequestBodyMethods() {
+    for (method in RequestBody::class.java.declaredMethods) {
+      val modifiers = method.modifiers
+      if (!Modifier.isPublic(modifiers) ||
+        Modifier.isStatic(modifiers) ||
+        Modifier.isFinal(modifiers) ||
+        method.isSynthetic
+      ) {
+        continue
+      }
+
+      ForwardingRequestBody::class.java.getDeclaredMethod(
+        method.name,
+        *method.parameterTypes,
+      )
+    }
   }
 }
