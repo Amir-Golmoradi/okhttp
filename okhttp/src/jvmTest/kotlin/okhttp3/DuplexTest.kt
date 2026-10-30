@@ -395,18 +395,21 @@ class DuplexTest {
   fun duplexWithRedirect() {
     enableProtocol(Protocol.HTTP_2)
     val duplexResponseSent = CountDownLatch(1)
-    val requestBodyStartListener =
+    val requestHeadersEndListener =
       object : EventListener() {
-        override fun requestBodyStart(call: Call) {
-          // For duplex requests, headers have been flushed before this callback.
-          // Wait for the response before following the redirect and resetting the stream.
+        override fun requestHeadersEnd(
+          call: Call,
+          request: Request,
+        ) {
+          // Wait for the server to send the duplex response before acting on the 301 response
+          // and resetting the stream.
           duplexResponseSent.await()
         }
       }
     client =
       client
         .newBuilder()
-        .eventListener(eventRecorder.eventListener + requestBodyStartListener)
+        .eventListener(eventRecorder.eventListener + requestHeadersEndListener)
         .build()
     val body =
       MockSocketHandler()
