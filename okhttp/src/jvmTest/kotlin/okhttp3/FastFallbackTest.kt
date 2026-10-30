@@ -23,9 +23,7 @@ import java.io.IOException
 import java.net.Inet4Address
 import java.net.Inet6Address
 import java.net.InetAddress
-import java.net.InetSocketAddress
 import java.net.Socket
-import java.net.SocketAddress
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertFailsWith
@@ -283,23 +281,19 @@ class FastFallbackTest {
     serverIpv4.protocols = listOf(Protocol.H2_PRIOR_KNOWLEDGE)
     serverIpv6.protocols = listOf(Protocol.H2_PRIOR_KNOWLEDGE)
 
-    // Stall IPv6 so IPv4 wins regardless of socket creation order.
-    val ipv6ConnectLatch = CountDownLatch(1)
+    // Yield the first IP address so the second IP address completes first.
+    val firstConnectLatch = CountDownLatch(1)
     val socketFactory =
       object : DelegatingSocketFactory(Platform.get().socketFactory) {
-        override fun createSocket(): Socket =
-          object : Socket() {
-            override fun connect(
-              endpoint: SocketAddress?,
-              timeout: Int,
-            ) {
-              val target = endpoint as InetSocketAddress
-              if (target.address == localhostIpv6) {
-                ipv6ConnectLatch.await()
-              }
-              super.connect(target, timeout)
-            }
+        var first = true
+
+        override fun createSocket(): Socket {
+          if (first) {
+            first = false
+            firstConnectLatch.await()
           }
+          return super.createSocket()
+        }
       }
 
     client =
@@ -312,7 +306,7 @@ class FastFallbackTest {
             try {
               chain.proceed(chain.request())
             } finally {
-              ipv6ConnectLatch.countDown()
+              firstConnectLatch.countDown()
             }
           },
         ).build()
